@@ -20,7 +20,7 @@
 
 #include "Types.h"
 #include "Coords.h"
-#include "Alloc.h"
+#include "Array.h"
 #include "Angles.h"
 #include "GetInt.h"
 #include "Colors.h"

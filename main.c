@@ -5,29 +5,37 @@ typedef struct{
 	Direction dir;
 }Snake;
 
-void drawGrid(char grid[], Length gridLen, uint scale){
-	for (int i = 0; i < gridLen.x * gridLen.y; i++){
-		switch(grid[i]){
-			case 's':
-			setColor(GREEN);
-			fillSquare((i % gridLen.x) * scale, (i / gridLen.x) * scale, scale);
+void drawGrid(char** grid, Length gridLen, uint scale){
+	for (uint y = 0; y < gridLen.y; y++){
+		for (uint x = 0; x < gridLen.x; x++){
+			switch(grid[x][y]){
+				case 's':
+				setColor(GREEN);
+				fillSquare(x * scale, y * scale, scale);
 				break;
-			case 'a':
-			setColor(RED);
-			fillSquare((i % gridLen.x) * scale, (i / gridLen.x) * scale, scale);
+				case 'a':
+				setColor(RED);
+				fillSquare(x * scale, y * scale, scale);
 				break;
-			case ' '
-			setColor(BLACK);
-			fillSquare((i % gridLen.x) * scale, (i / gridLen.x) * scale, scale);
+				case ' ':
+				setColor(BLACK);
+				fillSquare(x * scale, y * scale, scale);
 				break;
+			}
+			//printf("%d\n", x);
+			//printf("%u, %u\n", x, y);
 		}
 	}
-	printf("line 21\n");
 }
 
-void randomApple(char **grid, Snake snake)
+Coord randomApple(Length gridLen, Snake snake)
 {
-
+	Coord apple;
+	do{
+		apple.x = rand() % gridLen.x;
+		apple.y = rand() % gridLen.y;
+	}while(coordSame(apple, snake.pos));
+	return apple;
 }
 
 int main(int argc, char const *argv[])
@@ -37,9 +45,11 @@ int main(int argc, char const *argv[])
 	const Length gridLen = coordDiv(window, scale);
 	init(window);
 
-	char **grid = calloc(gridLen.x, sizeof(char*));
-	for(uint i = 0; i < gridLen.x; i++)
-		grid[i] = calloc(gridLen.y, sizeof(char));
+	char **grid = malloc(gridLen.x * sizeof(char*));
+	for(uint i = 0; i < gridLen.x; i++){
+		grid[i] = malloc(gridLen.y * sizeof(char));
+	} //
+
 
 	for(uint y = 0; y < gridLen.y; y++){
 		for(uint x = 0; x < gridLen.x; x++){
@@ -52,31 +62,55 @@ int main(int argc, char const *argv[])
 		.dir = DIR_R
 	};
 
+	Coord apple = randomApple(gridLen, snake);
+
+	// grid[tileSnake.x][tileSnake.y] = 's';
+	// grid[80][40] = 'a';
+
 	grid[snake.pos.x][snake.pos.y] = 's';
+	grid[apple.x][apple.y] = 'a';
 
+	const u8 dirKeyCode[4] = {
+		SDL_SCANCODE_W,
+		SDL_SCANCODE_D,
+		SDL_SCANCODE_S,
+		SDL_SCANCODE_A
+	};
 
+	const char dirKeyChar[4] = {
+		'W',
+		'D',
+		'S',
+		'A'
+	};
+
+	uint frameCount = 0;
 	while(1){
 		Ticks frameStart = getTicks();
 		clear();
 
-		if (keyPressed(SDL_SCANCODE_W)){
-			snakeVector = -1 * gridLen.x;
-		}
-		if (keyPressed(SDL_SCANCODE_A)){
-			snakeVector = -1;
-		}
-		if (keyPressed(SDL_SCANCODE_S)){
-			snakeVector = gridLen.x;
-		}
-		if (keyPressed(SDL_SCANCODE_D)){
-			snakeVector = 1;
+		for(uint i = 0; i < 4; i++){
+			if(keyPressed(dirKeyCode[i])){
+				snake.dir = i;
+				printf("Key %c pressed\n", dirKeyChar[i]);
+			}
 		}
 
-		grid[tileSnake + snakeVector] = 's';
-		grid[tileSnake] = ' ';
-		tileSnake += snakeVector;
+		if(frameCount > FPS/4){
+			frameCount = 0;
+
+			grid[snake.pos.x][snake.pos.y] = ' ';
+			snake.pos = coordShift(snake.pos, snake.dir, 1);
+			snake.pos.x = clamp(snake.pos.x, 0, gridLen.x);
+			snake.pos.y = clamp(snake.pos.y, 0, gridLen.y);
+			grid[snake.pos.x][snake.pos.y] = 's';
+			if (apple.x == snake.pos.x && apple.y == snake.pos.y){
+				apple = randomApple(gridLen, snake);
+				grid[apple.x][apple.y] = 'a';
+			}
+		}
 		drawGrid(grid, gridLen, scale);
-
+		frameCount++;
 		draw();
 		events(frameStart + TPF);
 	}
